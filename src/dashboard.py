@@ -306,7 +306,7 @@ def _format_fred_data_for_js(fred_data: dict) -> str:
     return " &middot; ".join(items)
 
 
-def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
+def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, stock_category: str = "Uncategorized", days: int = 90) -> dict:
     full_close = df["Close"]
     # Sicherstellen, dass wir nicht mehr Daten anfordern als vorhanden
     if len(full_close) < days:
