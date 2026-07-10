@@ -43,6 +43,17 @@ TEMPLATE = """<!DOCTYPE html>
 <h1>stockme Dashboard</h1>
 <div class="meta">Letztes Update: {generated_at} UTC &middot; kein automatisiertes Trading, reine Analyse</div>
 
+<h2>Übersicht</h2>
+<table>
+  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th>
+    <th>Potential*</th><th>Bias</th></tr></thead>
+  <tbody>
+    {overview_rows}
+  </tbody>
+</table>
+<div class="disclaimer">*Potential = Abstand zum EMA200 in % (Mean-Reversion-Maß: wie weit müsste der Kurs
+zum langfristigen Durchschnitt aufholen/nachgeben). Keine Kursprognose oder Kursziel.</div>
+
 <div class="grid" id="charts"></div>
 
 <h2>Letzte Alerts</h2>
@@ -91,12 +102,24 @@ for (const [symbol, data] of Object.entries(chartData)) {{
 
 
 def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
-    close = df["Close"].tail(days)
-    rsi = ind.rsi(df["Close"]).tail(days)
+    full_close = df["Close"]
+    close = full_close.tail(days)
+    rsi = ind.rsi(full_close).tail(days)
 
     bias, reason = overall_bias(df, cfg)
     atr_value = ind.atr(df, cfg.get("atr_period", 14)).iloc[-1]
     support, resistance = ind.support_resistance(df, cfg.get("support_resistance_window", 20))
+
+    last_price = float(full_close.iloc[-1])
+    prev_price = float(full_close.iloc[-2]) if len(full_close) > 1 else last_price
+    day_change_pct = (last_price / prev_price - 1) * 100 if prev_price else 0.0
+
+    ema50 = ind.ema(full_close, 50).iloc[-1]
+    ema200 = ind.ema(full_close, 200).iloc[-1] if len(full_close) >= 200 else float("nan")
+    # "Potential" = Abstand zum EMA200 in % (Mean-Reversion-Maß, KEINE Kursprognose/-ziel):
+    # positiv = Kurs unter EMA200 (Aufholpotential zum langfristigen Schnitt),
+    # negativ = Kurs über EMA200 (bereits darüber gelaufen)
+    potential_pct = (ema200 / last_price - 1) * 100 if pd.notna(ema200) and last_price else float("nan")
 
     return {
         "dates": [d.strftime("%Y-%m-%d") for d in close.index],
@@ -108,7 +131,28 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
         "atr": round(float(atr_value), 2) if pd.notna(atr_value) else "n/a",
         "support": round(support, 2),
         "resistance": round(resistance, 2),
+        "price": round(last_price, 2),
+        "day_change_pct": round(day_change_pct, 2),
+        "ema50": round(float(ema50), 2) if pd.notna(ema50) else None,
+        "ema200": round(float(ema200), 2) if pd.notna(ema200) else None,
+        "potential_pct": round(float(potential_pct), 2) if pd.notna(potential_pct) else None,
     }
+
+
+def _overview_rows(chart_data: dict) -> str:
+    rows = []
+    for symbol, d in chart_data.items():
+        change_color = "#3ecf6b" if d["day_change_pct"] >= 0 else "#ff5c5c"
+        ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
+        ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
+        potential_txt = f"{d['potential_pct']:+.1f}%" if d["potential_pct"] is not None else "n/a"
+        rows.append(
+            f"<tr><td>{symbol}</td><td>{d['price']:.2f}</td>"
+            f"<td style=\"color:{change_color}\">{d['day_change_pct']:+.2f}%</td>"
+            f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>"
+            f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
+        )
+    return "\n".join(rows) or "<tr><td colspan=\"7\">Keine Daten.</td></tr>"
 
 
 def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None) -> None:
@@ -126,6 +170,7 @@ def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indi
     html = TEMPLATE.format(
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
         alert_rows=alert_rows,
+        overview_rows=_overview_rows(chart_data),
         chart_data_json=json.dumps(chart_data),
     )
 
