@@ -97,9 +97,9 @@ TEMPLATE = """<!DOCTYPE html>
 <div id="fred-data" style="margin-top: 1.5rem; font-size: 0.9rem; color: #999;">
   <!-- FRED data will be inserted here by JS -->
 </div>
-<script>
+<script> 
   // Function to format FRED values
-  function formatFredValue(seriesId, value) {
+  function formatFredValue(seriesId, value) {{
     return parseFloat(value).toFixed(2) + '%'; // Default to percentage for common FRED series
   }}
 </script>
