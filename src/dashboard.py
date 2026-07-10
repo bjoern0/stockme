@@ -148,7 +148,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
   card.dataset.stockCategory = data.stock_category; // Add stock category to card dataset
-  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : '';
+  card.dataset.alertCategories = data.alert_categories ? data.alert_categories.join(',') : ''; // Renamed for clarity
   card.innerHTML = `<h2>${{symbol}} - ${{data.company_name}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
@@ -258,6 +258,7 @@ function applyFilters() {{
 // Browser/Erweiterungen/CSP-Regeln Inline-Event-Handler blockieren.
 document.getElementById('symbolFilter').addEventListener('input', applyFilters);
 document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+document.getElementById('stockCategoryFilter').addEventListener('change', applyFilters); // New event listener for stock categories
 document.getElementById('resetFilters').addEventListener('click', () => {{
   document.getElementById('symbolFilter').value = '';
   document.getElementById('categoryFilter').value = '';
@@ -279,14 +280,10 @@ document.querySelector('table:first-of-type').addEventListener('click', (event) 
   const link = event.target.closest('.symlink');
   if (link) {{
     const row = link.closest('tr');
-    if (row) scrollToChart(row.dataset.symbol);
+    const symbol = link.dataset.symbol; // Get symbol from data-symbol attribute
+    if (symbol) scrollToChart(symbol);
   }}
 }});
-
-// Initialize Tablesort.js on the overview table
-new Tablesort(document.getElementById('overviewTable'));
-
-
 </script>
 </body>
 </html>
@@ -306,7 +303,7 @@ def _format_fred_data_for_js(fred_data: dict) -> str:
     return " &middot; ".join(items)
 
 
-def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, stock_category: str = "Uncategorized", days: int = 90) -> dict:
+def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     full_close = df["Close"]
     # Sicherstellen, dass wir nicht mehr Daten anfordern als vorhanden
     if len(full_close) < days:
@@ -358,7 +355,6 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, stock_category:
         market_cap = ticker_info.get("marketCap")
         eps = ticker_info.get("trailingEps")
         company_name = ticker_info.get("longName") or ticker_info.get("shortName")
-        # stock_category is passed directly, no need to get from yfinance
     except Exception as e:
         logger.warning(f"Konnte Fundamentaldaten für {symbol} nicht abrufen: {e}")
     # --- ENDE Fundamentaldaten ---
@@ -462,32 +458,24 @@ def _alert_row(row) -> str:
     return (
         f"<tr class=\"{row_class}\" data-symbol=\"{row['symbol']}\" data-category=\"{category}\">"
         f"<td>{row['sent_at'][:19].replace('T', ' ')}</td>"
-        f"<td><a class=\"symlink\" data-symbol=\"{row['symbol']}\">{row['symbol']}</a></td>"
+        f"<td><a class=\"symlink\">{row['symbol']}</a></td>"
         f"<td>{category}</td>"
         f"<td>{row['message'] or row['kind']}</td></tr>"
     )
 
 
-def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None, stock_configs: list[dict[str, str]] | None = None) -> None:
+def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None) -> None:
     cfg = indicator_cfg or {}
-    stock_configs = stock_configs or []
-    # Create a mapping from symbol to its stock category for easy lookup
-    symbol_to_stock_category = {item['symbol']: item.get('category', 'Uncategorized') for item in stock_configs}
 
     # Sammle alle Kategorien pro Symbol aus den Alerts
     symbol_to_alert_categories = defaultdict(set)
     for row in recent_alerts:
         symbol_to_alert_categories[row['symbol']].add(_categorize(row['kind']))
-    
-    # Get all unique stock categories for the filter dropdown
-    all_stock_categories = sorted(list(set(symbol_to_stock_category.values())))
-    stock_category_options = "".join([f"<option value=\"{cat}\">{cat}</option>" for cat in all_stock_categories])
 
     chart_data = {}
     for symbol, df in symbol_dataframes.items():
         if df is not None:
-            stock_category = symbol_to_stock_category.get(symbol, "Uncategorized")
-            data = _series_for_symbol(symbol, df, cfg, stock_category=stock_category) # Pass stock_category
+            data = _series_for_symbol(symbol, df, cfg) # <--- HIER WIRD DAS SYMBOL KORREKT ÜBERGEBEN
             data['alert_categories'] = list(symbol_to_alert_categories[symbol]) # Füge Kategorien zu den Chart-Daten hinzu
             chart_data[symbol] = data
 

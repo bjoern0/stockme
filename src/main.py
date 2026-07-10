@@ -60,7 +60,7 @@ def scan_reddit(settings) -> list[str]:
     cfg = settings.reddit
     if not cfg.get("enabled", False):
         return []
-    symbols = [item['symbol'] for item in settings.all_stock_configs] # Extract symbols from combined configs
+    symbols = [item['symbol'] for item in settings.all_stock_configs]
     counts = reddit_scan.count_mentions(
         settings.reddit_client_id,
         settings.reddit_client_secret,
@@ -102,15 +102,15 @@ def main() -> None:
     logger.info("Crypto-Watchlist: %s", settings.crypto_watchlist)
     logger.info("Screening-Watchlist: %s", settings.screening_watchlist)
 
-    all_symbols_list = [item['symbol'] for item in settings.all_stock_configs]
+    all_symbols_list = [item['symbol'] for item in settings.all_stock_configs] # Extract symbols for data fetching
     dataframes = fetch_all(all_symbols_list)
 
     messages = scan_symbols(dataframes, settings) + scan_top_movers(settings) + scan_reddit(settings) # + scan_news(settings)
 
     fred_economic_data = fetch_and_display_fred_data(settings)
 
-    # Pass the full stock configs to the dashboard for category information
-    dashboard.render(dataframes, state.get_recent_alerts(), settings.indicators, fred_economic_data, settings.all_stock_configs)
+    # Pass the full stock configs to the dashboard for category information and FRED data
+    dashboard.render(dataframes, state.get_recent_alerts(), settings.indicators, fred_economic_data, settings.all_stock_configs) 
     logger.info("Dashboard aktualisiert: %s", dashboard.OUTPUT_PATH)
 
     if not messages:
