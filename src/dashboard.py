@@ -14,8 +14,11 @@ from pathlib import Path
 import pandas as pd
 
 from . import indicators as ind
+from .signals import overall_bias
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "docs" / "index.html"
+
+BIAS_COLORS = {"bullish": "#3ecf6b", "bearish": "#ff5c5c", "neutral": "#999"}
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="de">
@@ -58,7 +61,10 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   const grid = document.getElementById('charts');
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = `<h2>${{symbol}}</h2><canvas></canvas>`;
+  card.innerHTML = `<h2>${{symbol}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
+    `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>` +
+    `ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}</div>` +
+    `<canvas></canvas>`;
   grid.appendChild(card);
   const ctx = card.querySelector('canvas');
   new Chart(ctx, {{
@@ -84,19 +90,31 @@ for (const [symbol, data] of Object.entries(chartData)) {{
 """
 
 
-def _series_for_symbol(df: pd.DataFrame, days: int = 90) -> dict:
+def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     close = df["Close"].tail(days)
     rsi = ind.rsi(df["Close"]).tail(days)
+
+    bias, reason = overall_bias(df, cfg)
+    atr_value = ind.atr(df, cfg.get("atr_period", 14)).iloc[-1]
+    support, resistance = ind.support_resistance(df, cfg.get("support_resistance_window", 20))
+
     return {
         "dates": [d.strftime("%Y-%m-%d") for d in close.index],
         "close": [round(v, 2) for v in close.tolist()],
         "rsi": [round(v, 1) for v in rsi.tolist()],
+        "bias": bias,
+        "bias_color": BIAS_COLORS.get(bias, "#999"),
+        "bias_reason": reason,
+        "atr": round(float(atr_value), 2) if pd.notna(atr_value) else "n/a",
+        "support": round(support, 2),
+        "resistance": round(resistance, 2),
     }
 
 
-def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list) -> None:
+def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None) -> None:
+    cfg = indicator_cfg or {}
     chart_data = {
-        symbol: _series_for_symbol(df) for symbol, df in symbol_dataframes.items() if df is not None
+        symbol: _series_for_symbol(df, cfg) for symbol, df in symbol_dataframes.items() if df is not None
     }
 
     alert_rows = "\n".join(

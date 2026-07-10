@@ -67,4 +67,53 @@ def evaluate(symbol: str, df: pd.DataFrame, cfg: dict) -> list[Signal]:
     if bool(vol_spike.iloc[last]):
         signals.append(Signal(symbol, "VOLUME_SPIKE", "Ungewöhnlich hohes Handelsvolumen"))
 
+    support, resistance = ind.support_resistance(df, cfg.get("support_resistance_window", 20))
+    if last_close > resistance:
+        signals.append(Signal(symbol, "RESISTANCE_BREAKOUT", f"Kurs {last_close:.2f} über {cfg.get('support_resistance_window', 20)}-Tage-Hoch ({resistance:.2f})"))
+    elif last_close < support:
+        signals.append(Signal(symbol, "SUPPORT_BREAKDOWN", f"Kurs {last_close:.2f} unter {cfg.get('support_resistance_window', 20)}-Tage-Tief ({support:.2f})"))
+
     return signals
+
+
+def overall_bias(df: pd.DataFrame, cfg: dict) -> tuple[str, str]:
+    """Fasst mehrere Indikatoren zu einer groben Einordnung zusammen (bullish/bearish/neutral),
+    angelehnt an das Report-Format klassischer technischer Chart-Analyse (Trend + Momentum).
+    Bewusst nur als Kontext fürs Dashboard gedacht, kein eigenständiges Alert-Signal
+    (würde sonst täglich feuern, ohne echten Neuigkeitswert)."""
+    close = df["Close"]
+    if len(df) < max(cfg.get("sma_long", 50), 26) + 2:
+        return "neutral", "zu wenig Historie"
+
+    sma_short = ind.sma(close, cfg.get("sma_short", 20)).iloc[-1]
+    sma_long = ind.sma(close, cfg.get("sma_long", 50)).iloc[-1]
+    macd_hist = ind.macd(close)["hist"].iloc[-1]
+    last_rsi = ind.rsi(close, cfg.get("rsi_period", 14)).iloc[-1]
+    last_close = close.iloc[-1]
+
+    score = 0
+    reasons = []
+
+    if last_close > sma_short > sma_long:
+        score += 1
+        reasons.append("Aufwärtstrend (Kurs > SMA-kurz > SMA-lang)")
+    elif last_close < sma_short < sma_long:
+        score -= 1
+        reasons.append("Abwärtstrend (Kurs < SMA-kurz < SMA-lang)")
+
+    if macd_hist > 0:
+        score += 1
+        reasons.append("MACD-Histogramm positiv")
+    elif macd_hist < 0:
+        score -= 1
+        reasons.append("MACD-Histogramm negativ")
+
+    if 50 < last_rsi < cfg.get("rsi_overbought", 70):
+        score += 1
+        reasons.append(f"RSI {last_rsi:.0f} mit bullischem Momentum")
+    elif cfg.get("rsi_oversold", 30) < last_rsi < 50:
+        score -= 1
+        reasons.append(f"RSI {last_rsi:.0f} mit bärischem Momentum")
+
+    label = "bullish" if score >= 2 else "bearish" if score <= -2 else "neutral"
+    return label, "; ".join(reasons) if reasons else "keine klare Tendenz"

@@ -41,3 +41,20 @@ def bollinger_bands(series: pd.Series, period: int = 20, stddev: float = 2.0) ->
 def volume_spike(volume: pd.Series, lookback: int = 20, multiplier: float = 2.0) -> pd.Series:
     avg_volume = volume.rolling(window=lookback).mean()
     return volume > (avg_volume * multiplier)
+
+
+def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Average True Range - Volatilitätsmaß, unabhängig von Kursrichtung."""
+    high, low, close = df["High"], df["Low"], df["Close"]
+    prev_close = close.shift(1)
+    true_range = pd.concat(
+        [high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1
+    ).max(axis=1)
+    return true_range.rolling(window=period).mean()
+
+
+def support_resistance(df: pd.DataFrame, window: int = 20) -> tuple[float, float]:
+    """Einfache Swing-Hoch/-Tief-Levels über die letzten `window` Tage (ohne den aktuellsten Tag,
+    damit ein Ausbruch heute gegen das *vorherige* Level geprüft wird, nicht gegen sich selbst)."""
+    recent = df.iloc[-(window + 1):-1]
+    return float(recent["Low"].min()), float(recent["High"].max())

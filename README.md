@@ -7,8 +7,9 @@ Kleiner, kostenloser Scanner für technische Signale + marktweite Top-Mover, mit
 
 - `config.yaml` – Watchlist + Schwellwerte, kein Code-Change nötig zum Erweitern
 - `src/data.py` – Kursdaten via `yfinance` (kostenlos, kein API-Key)
-- `src/indicators.py` – RSI, SMA/EMA, MACD, Bollinger Bands, Volumen-Spike (bewusst simpel, keine Overfitting-Parameter)
-- `src/signals.py` – kombiniert Indikatoren zu Alerts
+- `src/indicators.py` – RSI, SMA/EMA, MACD, Bollinger Bands, Volumen-Spike, ATR, Support/Resistance
+  (bewusst simpel, keine Overfitting-Parameter)
+- `src/signals.py` – kombiniert Indikatoren zu Alerts + "Overall Bias" (bullish/bearish/neutral) für's Dashboard
 - `src/state.py` – SQLite-Dedup, damit derselbe Alert nicht bei jedem Lauf erneut kommt
 - `src/notifier.py` – Telegram-Versand
 - `src/reddit_scan.py` – zählt Ticker-Erwähnungen in konfigurierten Subreddits (optional, siehe unten)
@@ -118,6 +119,41 @@ das reicht für öffentliches Lesen. Reddit-API ist für diesen Umfang (nicht-ko
 
 Aktiv über `top_movers` in `config.yaml`, nutzt `yfinance.screen()` für `day_gainers` / `day_losers` /
 `most_actives` – markiert Werte mit starker Kursbewegung unabhängig von der Watchlist.
+
+## Technische Analyse im Detail
+
+Neben RSI/SMA/MACD/Bollinger/Volumen-Spike:
+
+- **ATR (Average True Range)**: reines Volatilitätsmaß (keine Richtung), im Dashboard je Symbol angezeigt –
+  hilfreich zur Einordnung, wie "wild" ein Wert aktuell schwankt (z.B. für eigene Stop-Loss-Überlegungen)
+- **Support/Resistance**: einfaches Swing-Hoch/-Tief über `support_resistance_window` Tage (Standard 20),
+  löst `RESISTANCE_BREAKOUT`/`SUPPORT_BREAKDOWN`-Alerts aus
+- **Overall Bias**: fasst Trend (SMA-Verhältnis) + Momentum (MACD-Histogramm, RSI-Zone) zu einer groben
+  bullish/bearish/neutral-Einordnung zusammen, inkl. Begründung – nur im Dashboard sichtbar, kein eigener
+  Telegram-Alert (würde sonst täglich unverändert feuern, ohne echten Neuigkeitswert)
+
+Diese drei sind an die Analyse-Checkliste aus [tradesdontlie/tradingview-mcp](https://github.com/tradesdontlie/tradingview-mcp)
+(Skill `chart-analysis`) angelehnt – dessen eigentliches Tool (KI-Steuerung der lokalen TradingView-Desktop-App
+per Chrome DevTools Protocol) passt nicht zu unserem headless GitHub-Actions-Setup, aber die Analyse-Methodik
+dahinter (Trend + Momentum + Support/Resistance + zusammenfassender Bias) ließ sich 1:1 mit unseren eigenen,
+kostenlosen Daten umsetzen.
+
+## Geplante Erweiterung: Backtest-Report
+
+Noch nicht implementiert, aber als Vorlage vorgemerkt (angelehnt an den `strategy-report`-Skill desselben
+Projekts): Sobald ein Backtesting-Modul (z.B. mit `vectorbt`/`backtrader`) dazukommt, folgendes Report-Format:
+
+| Metrik | Bedeutung |
+|---|---|
+| Net Profit / Return % | Gesamtergebnis |
+| Win Rate | Anteil profitabler Trades |
+| Profit Factor | Ziel > 1.5 |
+| Max Drawdown | größter Verlust vom Hoch, $ und % |
+| Sharpe Ratio | risikoadjustierte Rendite |
+| Max Consecutive Losses | Robustheit der Strategie |
+
+Wichtig beim eigenen Backtesting: Out-of-Sample testen, nicht nur auf denselben Daten optimieren
+(Overfitting ist der häufigste Fehler bei Hobby-Systemen).
 
 ## Nicht enthalten (bewusst)
 

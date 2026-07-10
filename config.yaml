@@ -26,6 +26,8 @@ indicators:
   bollinger_stddev: 2
   volume_lookback: 20
   volume_spike_multiplier: 2.0
+  support_resistance_window: 20  # Tage für Swing-Hoch/-Tief (Breakout/Breakdown-Signale)
+  atr_period: 14
 
 # Marktweite Top-Mover/-Loser via Yahoo-Finance-Screener (yfinance.screen).
 # Läuft unabhängig von der Watchlist, um "auffällige" Werte zu entdecken.

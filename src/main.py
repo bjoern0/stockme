@@ -91,7 +91,7 @@ def main() -> None:
 
     messages = scan_symbols(dataframes, settings) + scan_top_movers(settings) + scan_reddit(settings)
 
-    dashboard.render(dataframes, state.get_recent_alerts())
+    dashboard.render(dataframes, state.get_recent_alerts(), settings.indicators)
     logger.info("Dashboard aktualisiert: %s", dashboard.OUTPUT_PATH)
 
     if not messages:
