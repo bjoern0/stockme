@@ -52,6 +52,7 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <title>stockme Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tablesort/5.2.1/tablesort.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   body {{ font-family: system-ui, sans-serif; margin: 2rem; background: #0f1115; color: #e6e6e6; }}
@@ -73,6 +74,10 @@ TEMPLATE = """<!DOCTYPE html>
   .card.hidden-card {{ display: none; }}
   a.symlink {{ color: #4ea1ff; text-decoration: none; cursor: pointer; }}
   a.symlink:hover {{ text-decoration: underline; }}
+  /* Tablesort.js styles */
+  table.sortable th:not(.no-sort) {{ cursor: pointer; }}
+  table.sortable th:not(.no-sort):after {{ content: " \\25bc"; opacity: 0.2; }}
+  table.sortable th:not(.no-sort).tablesort-asc:after {{ content: " \\25b2"; opacity: 1; }}
 </style>
 </head>
 <body>
@@ -106,8 +111,8 @@ TEMPLATE = """<!DOCTYPE html>
     return parseFloat(value).toFixed(2) + '%'; // Default to percentage for common FRED series
   }}
 </script>
-<h2>Übersicht</h2>
-<table>
+<h2>Übersicht</h2> 
+<table id="overviewTable" class="sortable">
   <thead><tr><th>Symbol</th><th>Name</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th><th>KGV</th><th>Div. Rendite</th><th>Marktkap.</th><th>EPS</th>
     <th>RSI</th><th>MACD Hist</th><th>52W High</th><th>52W Low</th><th>Bias</th></tr></thead>
   <tbody>
@@ -271,6 +276,11 @@ document.querySelector('table:first-of-type').addEventListener('click', (event) 
     if (row) scrollToChart(row.dataset.symbol);
   }}
 }});
+
+// Initialize Tablesort.js on the overview table
+new Tablesort(document.getElementById('overviewTable'));
+
+
 </script>
 </body>
 </html>
