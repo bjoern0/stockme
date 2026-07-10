@@ -1,0 +1,50 @@
+# Zentrale Konfiguration für den Scanner.
+# Watchlist erweitern = einfach Ticker (Yahoo-Finance-Symbol) hinzufügen.
+
+watchlist:
+  - symbol: MU     # Micron
+  - symbol: NVDA   # Nvidia
+  - symbol: NFLX   # Netflix
+  - symbol: MSFT   # Microsoft
+  - symbol: BKNG   # Booking Holdings
+
+# Krypto läuft 24/7 (kein Handelsschluss) und ist i.d.R. deutlich volatiler als Aktien.
+# Nutzt vorerst dieselben Indikator-Schwellwerte wie Aktien (siehe "indicators" unten) -
+# ggf. später eigene, weniger empfindliche Schwellwerte für Krypto ergänzen.
+crypto_watchlist:
+  - symbol: BTC-USD   # Bitcoin
+  - symbol: ETH-USD   # Ethereum
+  - symbol: XRP-USD   # XRP
+
+indicators:
+  rsi_period: 14
+  rsi_oversold: 30
+  rsi_overbought: 70
+  sma_short: 20
+  sma_long: 50
+  bollinger_period: 20
+  bollinger_stddev: 2
+  volume_lookback: 20
+  volume_spike_multiplier: 2.0
+
+# Marktweite Top-Mover/-Loser via Yahoo-Finance-Screener (yfinance.screen).
+# Läuft unabhängig von der Watchlist, um "auffällige" Werte zu entdecken.
+top_movers:
+  enabled: true
+  screens:
+    - day_gainers
+    - day_losers
+    - most_actives
+  count: 10               # wie viele Ergebnisse je Screen abgeholt werden
+  min_percent_change: 5.0 # nur Werte mit mind. dieser Kursbewegung (%) melden
+
+# Reddit-Sentiment (Platzhalter für die nächste Ausbaustufe).
+# Sobald aktiviert: benötigt REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET als Secrets/Env-Vars.
+reddit:
+  enabled: false
+  subreddits:
+    - wallstreetbets
+    - wallstreetbetsGer
+    - Trumptrades
+  min_mentions: 5   # Ticker-Erwähnungen im Zeitfenster, ab der ein Alert sinnvoll ist
+  lookback_hours: 24

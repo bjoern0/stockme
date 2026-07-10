@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Maschinenspezifische Corporate-CA-Zertifikate (siehe README "SSL in Firmennetzwerken")
+corp_ca_bundle.pem
+combined_ca_bundle.pem
