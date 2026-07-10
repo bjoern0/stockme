@@ -134,7 +134,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.className = 'card'; // Add data-categories for filtering
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
-  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : ''; 
+  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : '';
   card.innerHTML = `<h2>${{symbol}} - ${{data.company_name}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
