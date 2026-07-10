@@ -3,54 +3,96 @@
 
 watchlist:
   - symbol: AAPL   # Apple
+    category: Tech
   - symbol: NOW    # ServiceNow
+    category: Software
   - symbol: SAP    # SAP SE (ADR)
+    category: Software
   - symbol: ARM    # Arm Holdings
+    category: Semiconductors
   - symbol: HOOD   # Robinhood Markets
+    category: Fintech
   - symbol: MSFT   # Microsoft
+    category: Tech
   - symbol: VWAGY  # Volkswagen AG (ADR)
+    category: Automotive
   - symbol: MBG.DE # Mercedes-Benz Group AG (Frankfurt)
+    category: Automotive
   - symbol: RHM.DE # Rheinmetall AG (Frankfurt)
+    category: Defense
   - symbol: GOOGL  # Alphabet (Google)
+    category: Tech
   - symbol: AMZN   # Amazon
+    category: E-commerce
   - symbol: NVDA   # Nvidia
+    category: Semiconductors
   - symbol: TSLA   # Tesla
+    category: Automotive
   - symbol: JPM    # JPMorgan Chase
+    category: Finance
   - symbol: V      # Visa
+    category: Finance
   - symbol: PG     # Procter & Gamble
+    category: Consumer Staples
   - symbol: KO     # Coca-Cola
+    category: Consumer Staples
   - symbol: UNH    # UnitedHealth Group
+    category: Healthcare
   - symbol: LLY    # Eli Lilly and Company
+    category: Pharma
   - symbol: JNJ    # Johnson & Johnson
+    category: Healthcare
   - symbol: XOM    # Exxon Mobil
+    category: Energy
   - symbol: CVX    # Chevron
+    category: Energy
   - symbol: WMT    # Walmart
+    category: Retail
   - symbol: HD     # Home Depot
+    category: Retail
   - symbol: MCD    # McDonald's
+    category: Consumer Discretionary
   - symbol: NFLX   # Netflix
+    category: Media
   - symbol: AMD    # Advanced Micro Devices
+    category: Semiconductors
   - symbol: BABA   # Alibaba Group Holding
+    category: E-commerce
   - symbol: PFE    # Pfizer
+    category: Pharma
   - symbol: DIS    # Walt Disney
+    category: Media
   - symbol: SBUX   # Starbucks
+    category: Consumer Discretionary
   - symbol: CRM    # Salesforce (Software/Cloud)
+    category: Software
   - symbol: INTU   # Intuit (Software)
+    category: Software
   - symbol: CAT    # Caterpillar (Industrie/Value)
+    category: Industrials
   - symbol: BA     # Boeing (Industrie)
-  - symbol: CVX    # Chevron (Energie) - bereits drin, aber gut als Beispiel
+    category: Aerospace
   - symbol: BAC    # Bank of America (Finanzdienstleistungen)
+    category: Finance
   - symbol: MRK    # Merck & Co. (Gesundheitswesen/Pharma)
+    category: Pharma
   - symbol: PEP    # PepsiCo (Konsumgüter nicht-zyklisch)
+    category: Consumer Staples
   - symbol: F     # Ford Motor Company (Automobil/zyklisch)
+    category: Automotive
 
 # Krypto läuft 24/7 (kein Handelsschluss) und ist i.d.R. deutlich volatiler als Aktien.
 # Nutzt vorerst dieselben Indikator-Schwellwerte wie Aktien (siehe "indicators" unten) -
 # ggf. später eigene, weniger empfindliche Schwellwerte für Krypto ergänzen.
 crypto_watchlist:
   - symbol: SOL-USD   # Solana
+    category: Crypto
   - symbol: BTC-USD   # Bitcoin
+    category: Crypto
   - symbol: ETH-USD   # Ethereum
+    category: Crypto
   - symbol: XRP-USD   # XRP
+    category: Crypto
 
 # Eine zusätzliche Watchlist für breiteres Screening.
 # Hier können Sie z.B. alle Werte eines Index (S&P 500) oder eine eigene, größere Liste
@@ -58,17 +100,29 @@ crypto_watchlist:
 # Diese Liste wird für den Reddit-Scan und die technische Analyse verwendet.
 screening_watchlist:
   - symbol: GME    # GameStop (oft Reddit-relevant)
+    category: Retail
   - symbol: BB     # BlackBerry (oft Reddit-relevant)
+    category: Software
   - symbol: NOK    # Nokia (oft Reddit-relevant)
+    category: Telecom
   - symbol: CLOV   # Clover Health (oft Reddit-relevant)
+    category: Healthcare
   - symbol: WISH   # ContextLogic Inc. (oft Reddit-relevant)
+    category: E-commerce
   - symbol: AMC    # AMC Entertainment (oft Reddit-relevant)
+    category: Entertainment
   - symbol: PLTR   # Palantir Technologies
+    category: Software
   - symbol: RIVN   # Rivian Automotive
+    category: Automotive
   - symbol: COIN   # Coinbase Global
+    category: Crypto Exchange
   - symbol: MSTR   # MicroStrategy (Bitcoin-Bezug)
+    category: Software
   - symbol: U      # Unity Software
+    category: Gaming
   - symbol: SNOW   # Snowflake
+    category: Software
 
 indicators:
   rsi_period: 14

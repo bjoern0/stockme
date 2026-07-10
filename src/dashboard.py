@@ -99,6 +99,11 @@ TEMPLATE = """<!DOCTYPE html>
     <option value="Trend">Trend</option>
     <option value="Sonstige">Sonstige</option>
   </select>
+  <select id="stockCategoryFilter">
+    <option value="">Alle Stock-Kategorien</option>
+    <!-- STOCK_CATEGORY_OPTIONS -->
+  </select>
+
   <button id="resetFilters">Filter zurücksetzen</button>
 </div>
 
@@ -142,6 +147,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.className = 'card'; // Add data-categories for filtering
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
+  card.dataset.stockCategory = data.stock_category; // Add stock category to card dataset
   card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : '';
   card.innerHTML = `<h2>${{symbol}} - ${{data.company_name}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
@@ -342,6 +348,7 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90)
     pe_ratio: float | None = None
     dividend_yield: float | None = None
     market_cap: float | None = None
+    stock_category: str = "Uncategorized" # Default value
     company_name: str | None = None
     eps: float | None = None
     try:
@@ -351,6 +358,7 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90)
         market_cap = ticker_info.get("marketCap")
         eps = ticker_info.get("trailingEps")
         company_name = ticker_info.get("longName") or ticker_info.get("shortName")
+        # stock_category is passed directly, no need to get from yfinance
     except Exception as e:
         logger.warning(f"Konnte Fundamentaldaten für {symbol} nicht abrufen: {e}")
     # --- ENDE Fundamentaldaten ---
@@ -385,6 +393,7 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90)
         "pe_ratio": round(pe_ratio, 2) if isinstance(pe_ratio, (int, float)) and pd.notna(pe_ratio) else "n/a",
         "dividend_yield": f"{round(dividend_yield * 100, 2)}%" if isinstance(dividend_yield, (int, float)) and pd.notna(dividend_yield) else "n/a",
         "market_cap": f"{market_cap / 1_000_000_000:.2f}B" if isinstance(market_cap, (int, float)) and pd.notna(market_cap) else "n/a", # Format in Billions
+        "stock_category": stock_category,
         "company_name": company_name if company_name else "n/a",
         "eps": round(eps, 2) if isinstance(eps, (int, float)) and pd.notna(eps) else "n/a",
     }
@@ -427,7 +436,7 @@ def _overview_rows(chart_data: dict) -> str: # This function was already correct
         eps_txt = f"{eps_val:.2f}" if isinstance(eps_val, (int, float)) else "n/a"
 
         rows.append(
-            f"<tr><td>{symbol}</td><td>{d['company_name']}</td><td>{d['price']:.2f}</td>"
+            f"<tr data-stock-category=\"{d['stock_category']}\"><td>{symbol}</td><td>{d['company_name']}</td><td>{d['price']:.2f}</td>"
             f"<td style=\"color:{change_color}\">{d['day_change_pct']:+.2f}%</td>"
             f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>" # Potential
             f"<td>{pe_ratio_txt}</td>" # KGV
@@ -440,7 +449,7 @@ def _overview_rows(chart_data: dict) -> str: # This function was already correct
             f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"16\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"17\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
@@ -449,24 +458,32 @@ def _alert_row(row) -> str:
     return (
         f"<tr class=\"{row_class}\" data-symbol=\"{row['symbol']}\" data-category=\"{category}\">"
         f"<td>{row['sent_at'][:19].replace('T', ' ')}</td>"
-        f"<td><a class=\"symlink\">{row['symbol']}</a></td>"
+        f"<td><a class=\"symlink\" data-symbol=\"{row['symbol']}\">{row['symbol']}</a></td>"
         f"<td>{category}</td>"
         f"<td>{row['message'] or row['kind']}</td></tr>"
     )
 
 
-def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None) -> None:
+def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None, stock_configs: list[dict[str, str]] | None = None) -> None:
     cfg = indicator_cfg or {}
+    stock_configs = stock_configs or []
+    # Create a mapping from symbol to its stock category for easy lookup
+    symbol_to_stock_category = {item['symbol']: item.get('category', 'Uncategorized') for item in stock_configs}
 
     # Sammle alle Kategorien pro Symbol aus den Alerts
     symbol_to_alert_categories = defaultdict(set)
     for row in recent_alerts:
         symbol_to_alert_categories[row['symbol']].add(_categorize(row['kind']))
+    
+    # Get all unique stock categories for the filter dropdown
+    all_stock_categories = sorted(list(set(symbol_to_stock_category.values())))
+    stock_category_options = "".join([f"<option value=\"{cat}\">{cat}</option>" for cat in all_stock_categories])
 
     chart_data = {}
     for symbol, df in symbol_dataframes.items():
         if df is not None:
-            data = _series_for_symbol(symbol, df, cfg) # <--- HIER WIRD DAS SYMBOL KORREKT ÜBERGEBEN
+            stock_category = symbol_to_stock_category.get(symbol, "Uncategorized")
+            data = _series_for_symbol(symbol, df, cfg, stock_category=stock_category) # Pass stock_category
             data['alert_categories'] = list(symbol_to_alert_categories[symbol]) # Füge Kategorien zu den Chart-Daten hinzu
             chart_data[symbol] = data
 
@@ -483,6 +500,7 @@ def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indi
         overview_rows=_overview_rows(chart_data),
         chart_data_json=json.dumps(chart_data),
     )
+    html = html.replace("<!-- STOCK_CATEGORY_OPTIONS -->", stock_category_options)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(html, encoding="utf-8")

@@ -17,16 +17,21 @@ class Settings:
     raw: dict
 
     @property
-    def watchlist(self) -> list[str]:
-        return [item["symbol"] for item in self.raw.get("watchlist", [])]
+    def watchlist(self) -> list[dict[str, str]]:
+        return self.raw.get("watchlist", [])
 
     @property
-    def crypto_watchlist(self) -> list[str]:
-        return [item["symbol"] for item in self.raw.get("crypto_watchlist", [])]
+    def crypto_watchlist(self) -> list[dict[str, str]]:
+        return self.raw.get("crypto_watchlist", [])
 
     @property
-    def screening_watchlist(self) -> list[str]:
-        return [item["symbol"] for item in self.raw.get("screening_watchlist", [])]
+    def screening_watchlist(self) -> list[dict[str, str]]:
+        return self.raw.get("screening_watchlist", [])
+
+    @property
+    def all_stock_configs(self) -> list[dict[str, str]]:
+        """Kombiniert alle Watchlists zu einer Liste von Symbol-Konfigurationen."""
+        return self.watchlist + self.crypto_watchlist + self.screening_watchlist
 
     @property
     def indicators(self) -> dict:

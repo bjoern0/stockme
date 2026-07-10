@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def fetch_history(symbol: str, period: str = "6mo", interval: str = "1d") -> pd.DataFrame | None:
     """Historische OHLCV-Daten für einen Ticker. None falls nicht abrufbar. Standard: 2 Jahre für EMA200."""
     try:
-        df = yf.Ticker(symbol).history(period="2y", interval=interval) # Geändert von 6mo auf 2y für EMA200
+        df = yf.Ticker(symbol).history(period="2y", interval=interval) # Geändert von 6mo auf 2y für EMA200. period parameter is ignored now.
     except Exception:
         logger.exception("Konnte Historie für %s nicht laden", symbol)
         return None
