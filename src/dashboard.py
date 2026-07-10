@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from collections import defaultdict
+import logging
 from pathlib import Path
 
 import yfinance as yf
@@ -17,6 +18,8 @@ import pandas as pd
 
 from . import indicators as ind
 from .signals import overall_bias
+
+logger = logging.getLogger(__name__)
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "docs" / "index.html"
 
@@ -330,14 +333,14 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     company_name: str | None = None
     eps: float | None = None
     try:
-        ticker_info = yf.Ticker(df.name).info # df.name should be the symbol
+        ticker_info = yf.Ticker(symbol).info # df.name should be the symbol
         pe_ratio = ticker_info.get("trailingPE")
         dividend_yield = ticker_info.get("dividendYield")
         market_cap = ticker_info.get("marketCap")
         eps = ticker_info.get("trailingEps")
         company_name = ticker_info.get("longName") or ticker_info.get("shortName")
     except Exception as e:
-        logger.warning(f"Konnte Fundamentaldaten für {df.name} nicht abrufen: {e}")
+        logger.warning(f"Konnte Fundamentaldaten für {symbol} nicht abrufen: {e}")
     # --- ENDE Fundamentaldaten ---
 
     return {
