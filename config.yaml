@@ -3,6 +3,10 @@
 
 watchlist:
   - symbol: AAPL   # Apple
+  - symbol: NOW    # ServiceNow
+  - symbol: SAP    # SAP SE (ADR)
+  - symbol: ARM    # Arm Holdings
+  - symbol: HOOD   # Robinhood Markets
   - symbol: MSFT   # Microsoft
   - symbol: GOOGL  # Alphabet (Google)
   - symbol: AMZN   # Amazon
@@ -26,6 +30,15 @@ watchlist:
   - symbol: PFE    # Pfizer
   - symbol: DIS    # Walt Disney
   - symbol: SBUX   # Starbucks
+  - symbol: CRM    # Salesforce (Software/Cloud)
+  - symbol: INTU   # Intuit (Software)
+  - symbol: CAT    # Caterpillar (Industrie/Value)
+  - symbol: BA     # Boeing (Industrie)
+  - symbol: CVX    # Chevron (Energie) - bereits drin, aber gut als Beispiel
+  - symbol: BAC    # Bank of America (Finanzdienstleistungen)
+  - symbol: MRK    # Merck & Co. (Gesundheitswesen/Pharma)
+  - symbol: PEP    # PepsiCo (Konsumgüter nicht-zyklisch)
+  - symbol: F     # Ford Motor Company (Automobil/zyklisch)
 
 # Krypto läuft 24/7 (kein Handelsschluss) und ist i.d.R. deutlich volatiler als Aktien.
 # Nutzt vorerst dieselben Indikator-Schwellwerte wie Aktien (siehe "indicators" unten) -
@@ -42,6 +55,10 @@ crypto_watchlist:
 # Diese Liste wird für den Reddit-Scan und die technische Analyse verwendet.
 screening_watchlist:
   - symbol: GME    # GameStop (oft Reddit-relevant)
+  - symbol: BB     # BlackBerry (oft Reddit-relevant)
+  - symbol: NOK    # Nokia (oft Reddit-relevant)
+  - symbol: CLOV   # Clover Health (oft Reddit-relevant)
+  - symbol: WISH   # ContextLogic Inc. (oft Reddit-relevant)
   - symbol: AMC    # AMC Entertainment (oft Reddit-relevant)
   - symbol: PLTR   # Palantir Technologies
   - symbol: RIVN   # Rivian Automotive

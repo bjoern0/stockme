@@ -105,7 +105,7 @@ TEMPLATE = """<!DOCTYPE html>
 </script>
 <h2>Übersicht</h2>
 <table>
-  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th><th>KGV</th><th>Div. Rendite</th><th>Marktkap.</th><th>EPS</th>
+  <thead><tr><th>Symbol</th><th>Name</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th><th>KGV</th><th>Div. Rendite</th><th>Marktkap.</th><th>EPS</th>
     <th>RSI</th><th>MACD Hist</th><th>52W High</th><th>52W Low</th><th>Bias</th></tr></thead>
   <tbody>
     {overview_rows}
@@ -134,8 +134,8 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.className = 'card'; // Add data-categories for filtering
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
-  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : '';
-  card.innerHTML = `<h2>${{symbol}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
+  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : ''; 
+  card.innerHTML = `<h2>${{symbol}} - ${{data.company_name}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
   grid.appendChild(card);
@@ -323,6 +323,23 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     # negativ = Kurs über EMA200 (bereits darüber gelaufen)
     potential_pct = (ema200 / last_price - 1) * 100 if pd.notna(ema200) and last_price else float("nan")
 
+    # --- Fundamentaldaten abrufen ---
+    pe_ratio: float | None = None
+    dividend_yield: float | None = None
+    market_cap: float | None = None
+    company_name: str | None = None
+    eps: float | None = None
+    try:
+        ticker_info = yf.Ticker(df.name).info # df.name should be the symbol
+        pe_ratio = ticker_info.get("trailingPE")
+        dividend_yield = ticker_info.get("dividendYield")
+        market_cap = ticker_info.get("marketCap")
+        eps = ticker_info.get("trailingEps")
+        company_name = ticker_info.get("longName") or ticker_info.get("shortName")
+    except Exception as e:
+        logger.warning(f"Konnte Fundamentaldaten für {df.name} nicht abrufen: {e}")
+    # --- ENDE Fundamentaldaten ---
+
     return {
         "dates": [d.strftime("%Y-%m-%d") for d in close.index],
         "close": [round(v, 2) for v in close.tolist()],
@@ -349,10 +366,16 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
         "potential_pct": round(float(potential_pct), 2) if pd.notna(potential_pct) else None,
         "last_rsi": round(float(rsi.iloc[-1]), 1),
         "last_macd_hist": round(float(macd_df_full["hist"].iloc[-1]), 2) if pd.notna(macd_df_full["hist"].iloc[-1]) else None,
+        # --- Fundamentaldaten formatieren und hinzufügen ---
+        "pe_ratio": round(pe_ratio, 2) if isinstance(pe_ratio, (int, float)) and pd.notna(pe_ratio) else "n/a",
+        "dividend_yield": f"{round(dividend_yield * 100, 2)}%" if isinstance(dividend_yield, (int, float)) and pd.notna(dividend_yield) else "n/a",
+        "market_cap": f"{market_cap / 1_000_000_000:.2f}B" if isinstance(market_cap, (int, float)) and pd.notna(market_cap) else "n/a", # Format in Billions
+        "company_name": company_name if company_name else "n/a",
+        "eps": round(eps, 2) if isinstance(eps, (int, float)) and pd.notna(eps) else "n/a",
     }
 
 
-def _overview_rows(chart_data: dict) -> str:
+def _overview_rows(chart_data: dict) -> str: # This function was already correct, no changes needed here.
     rows = []
     for symbol, d in chart_data.items():
         # Proximity to 52W High/Low
@@ -388,7 +411,7 @@ def _overview_rows(chart_data: dict) -> str:
         eps_txt = f"{eps_val:.2f}" if isinstance(eps_val, (int, float)) else "n/a"
 
         rows.append(
-            f"<tr><td>{symbol}</td><td>{d['price']:.2f}</td>"
+            f"<tr><td>{symbol}</td><td>{d['company_name']}</td><td>{d['price']:.2f}</td>"
             f"<td style=\"color:{change_color}\">{d['day_change_pct']:+.2f}%</td>"
             f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>" # Potential
             f"<td>{pe_ratio_txt}</td>" # KGV
@@ -401,7 +424,7 @@ def _overview_rows(chart_data: dict) -> str:
             f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"15\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"16\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
