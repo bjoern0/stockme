@@ -401,7 +401,7 @@ def _overview_rows(chart_data: dict) -> str:
             f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"16\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"15\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
