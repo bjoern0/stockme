@@ -73,8 +73,8 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="meta">Letztes Update: {generated_at} UTC &middot; kein automatisiertes Trading, reine Analyse</div>
 
 <div class="filter-bar">
-  <input type="text" id="symbolFilter" placeholder="Symbol filtern (z.B. NVDA)..." oninput="applyFilters()">
-  <select id="categoryFilter" onchange="applyFilters()">
+  <input type="text" id="symbolFilter" placeholder="Symbol filtern (z.B. NVDA)...">
+  <select id="categoryFilter">
     <option value="">Alle Kategorien</option>
     <option value="Breakout">Breakout</option>
     <option value="Top-Mover">Top-Mover</option>
@@ -86,7 +86,7 @@ TEMPLATE = """<!DOCTYPE html>
     <option value="Trend">Trend</option>
     <option value="Sonstige">Sonstige</option>
   </select>
-  <button onclick="document.getElementById('symbolFilter').value=''; document.getElementById('categoryFilter').value=''; applyFilters();">Filter zurücksetzen</button>
+  <button id="resetFilters">Filter zurücksetzen</button>
 </div>
 
 <h2>Übersicht</h2>
@@ -170,6 +170,23 @@ function applyFilters() {{
     card.classList.toggle('hidden-card', !(!symbolQuery || cardSymbol.includes(symbolQuery)));
   }});
 }}
+
+// addEventListener statt inline onclick/onchange-Attribute: robuster, funktioniert auch wenn
+// Browser/Erweiterungen/CSP-Regeln Inline-Event-Handler blockieren.
+document.getElementById('symbolFilter').addEventListener('input', applyFilters);
+document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+document.getElementById('resetFilters').addEventListener('click', () => {{
+  document.getElementById('symbolFilter').value = '';
+  document.getElementById('categoryFilter').value = '';
+  applyFilters();
+}});
+document.getElementById('alertsTable').addEventListener('click', (event) => {{
+  const link = event.target.closest('.symlink');
+  if (link) {{
+    const row = link.closest('tr');
+    if (row) scrollToChart(row.dataset.symbol);
+  }}
+}});
 </script>
 </body>
 </html>
@@ -236,7 +253,7 @@ def _alert_row(row) -> str:
     return (
         f"<tr class=\"{row_class}\" data-symbol=\"{row['symbol']}\" data-category=\"{category}\">"
         f"<td>{row['sent_at'][:19].replace('T', ' ')}</td>"
-        f"<td><a class=\"symlink\" onclick=\"scrollToChart('{row['symbol']}')\">{row['symbol']}</a></td>"
+        f"<td><a class=\"symlink\">{row['symbol']}</a></td>"
         f"<td>{category}</td>"
         f"<td>{row['message'] or row['kind']}</td></tr>"
     )
