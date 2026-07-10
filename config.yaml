@@ -8,6 +8,9 @@ watchlist:
   - symbol: ARM    # Arm Holdings
   - symbol: HOOD   # Robinhood Markets
   - symbol: MSFT   # Microsoft
+  - symbol: VWAGY  # Volkswagen AG (ADR)
+  - symbol: MBG.DE # Mercedes-Benz Group AG (Frankfurt)
+  - symbol: RHM.DE # Rheinmetall AG (Frankfurt)
   - symbol: GOOGL  # Alphabet (Google)
   - symbol: AMZN   # Amazon
   - symbol: NVDA   # Nvidia
