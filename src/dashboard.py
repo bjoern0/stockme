@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
@@ -30,12 +31,14 @@ CATEGORY_MAP = {
     "BOLLINGER_LOWER": "Bollinger", "BOLLINGER_UPPER": "Bollinger",
     "VOLUME_SPIKE": "Volumen",
     "RESISTANCE_BREAKOUT": "Breakout", "SUPPORT_BREAKDOWN": "Breakout",
+    "STRATEGY_BULLISH_REVERSAL": "Strategie",
     "REDDIT_MENTIONS": "Reddit",
 }
-PRIORITY_CATEGORIES = {"Breakout", "Top-Mover", "Reddit"}
+PRIORITY_CATEGORIES = {"Breakout", "Top-Mover", "Reddit", "Strategie"}
 
 
 def _categorize(kind: str) -> str:
+    """Ordnet einem Signal-Typ eine Dashboard-Kategorie zu."""
     if kind.startswith("TOP_MOVER_"):
         return "Top-Mover"
     return CATEGORY_MAP.get(kind, "Sonstige")
@@ -76,7 +79,8 @@ TEMPLATE = """<!DOCTYPE html>
   <input type="text" id="symbolFilter" placeholder="Symbol filtern (z.B. NVDA)...">
   <select id="categoryFilter">
     <option value="">Alle Kategorien</option>
-    <option value="Breakout">Breakout</option>
+    <option value="Breakout">Breakout</option> <!-- Keep this for explicit selection -->
+    <option value="Strategie">Strategie</option>
     <option value="Top-Mover">Top-Mover</option>
     <option value="Reddit">Reddit</option>
     <option value="RSI">RSI</option>
@@ -91,8 +95,8 @@ TEMPLATE = """<!DOCTYPE html>
 
 <h2>Übersicht</h2>
 <table>
-  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th>
-    <th>Potential*</th><th>Bias</th></tr></thead>
+  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th>
+    <th>RSI</th><th>MACD Hist</th><th>52W High</th><th>52W Low</th><th>Bias</th></tr></thead>
   <tbody>
     {overview_rows}
   </tbody>
@@ -117,12 +121,12 @@ const chartData = {chart_data_json};
 for (const [symbol, data] of Object.entries(chartData)) {{
   const grid = document.getElementById('charts');
   const card = document.createElement('div');
-  card.className = 'card';
+  card.className = 'card'; // Add data-categories for filtering
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
+  card.dataset.categories = data.alert_categories.join(',');
   card.innerHTML = `<h2>${{symbol}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
-    `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>` +
-    `ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}</div>` +
+    `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
   grid.appendChild(card);
   const ctx = card.querySelector('canvas');
@@ -131,15 +135,67 @@ for (const [symbol, data] of Object.entries(chartData)) {{
     data: {{
       labels: data.dates,
       datasets: [
-        {{ label: 'Close', data: data.close, borderColor: '#4ea1ff', yAxisID: 'y', tension: 0.1, pointRadius: 0 }},
-        {{ label: 'RSI', data: data.rsi, borderColor: '#ff9f4e', yAxisID: 'y1', tension: 0.1, pointRadius: 0 }}
+        {{ label: 'Close', data: data.close, borderColor: '#4ea1ff', yAxisID: 'y', tension: 0.1, pointRadius: 0, borderWidth: 2 }},
+        {{ label: 'RSI', data: data.rsi, borderColor: '#ff9f4e', yAxisID: 'y1', tension: 0.1, pointRadius: 0, borderWidth: 1 }},
+        {{ label: 'SMA Short', data: data.sma_short, borderColor: 'rgba(255, 204, 0, 0.7)', yAxisID: 'y', tension: 0.1, pointRadius: 0, borderDash: [5, 5], borderWidth: 1 }},
+        {{ label: 'SMA Long', data: data.sma_long, borderColor: 'rgba(200, 200, 200, 0.7)', yAxisID: 'y', tension: 0.1, pointRadius: 0, borderDash: [5, 5], borderWidth: 1 }},
+        {{ label: 'BB Upper', data: data.bb_upper, borderColor: 'rgba(150, 150, 150, 0.5)', yAxisID: 'y', tension: 0.1, pointRadius: 0, borderWidth: 1 }},
+        {{ label: 'BB Lower', data: data.bb_lower, borderColor: 'rgba(150, 150, 150, 0.5)', yAxisID: 'y', tension: 0.1, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(150, 150, 150, 0.05)', borderWidth: 1 }}
       ]
     }},
     options: {{
       scales: {{
         y: {{ position: 'left' }},
         y1: {{ position: 'right', min: 0, max: 100, grid: {{ drawOnChartArea: false }} }}
-      }}
+      }},
+      plugins: {{
+        legend: {{
+          labels: {{ color: '#e6e6e6' }}
+        }}
+      }},
+    }}
+  }});
+
+  // MACD Chart
+  const macd_card = card.querySelector('canvas:last-of-type');
+  new Chart(macd_card, {{
+    type: 'bar', // MACD histogram is bar, MACD/Signal lines are line
+    data: {{
+      labels: data.dates,
+      datasets: [
+        {{
+          label: 'MACD Hist',
+          data: data.macd_hist,
+          backgroundColor: data.macd_hist.map(val => val >= 0 ? 'rgba(62, 207, 107, 0.6)' : 'rgba(255, 92, 92, 0.6)'),
+          yAxisID: 'y',
+          barPercentage: 0.8,
+          categoryPercentage: 0.8,
+        }},
+        {{
+          type: 'line',
+          label: 'MACD',
+          data: data.macd_line,
+          borderColor: '#4ea1ff',
+          yAxisID: 'y',
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 1,
+        }},
+        {{
+          type: 'line',
+          label: 'Signal',
+          data: data.signal_line,
+          borderColor: '#ff9f4e',
+          yAxisID: 'y',
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 1,
+        }}
+      ]
+    }},
+    options: {{
+      scales: {{ y: {{ position: 'left' }} }},
+      plugins: {{ legend: {{ labels: {{ color: '#e6e6e6' }} }} }}
     }}
   }});
 }}
@@ -167,7 +223,10 @@ function applyFilters() {{
 
   document.querySelectorAll('#charts .card').forEach(card => {{
     const cardSymbol = (card.dataset.symbol || '').toUpperCase();
-    card.classList.toggle('hidden-card', !(!symbolQuery || cardSymbol.includes(symbolQuery)));
+    const cardCategories = (card.dataset.categories || '').split(','); // Get categories for this symbol
+    const symbolMatch = !symbolQuery || cardSymbol.includes(symbolQuery);
+    const categoryMatch = !category || cardCategories.includes(category); // Show if no category selected OR if symbol has alert in selected category
+    card.classList.toggle('hidden-card', !(symbolMatch && categoryMatch));
   }});
 }}
 
@@ -195,11 +254,27 @@ document.getElementById('alertsTable').addEventListener('click', (event) => {{
 
 def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     full_close = df["Close"]
+    # Sicherstellen, dass wir nicht mehr Daten anfordern als vorhanden
+    if len(full_close) < days:
+        days = len(full_close)
+
     close = full_close.tail(days)
-    rsi = ind.rsi(full_close).tail(days)
+
+    # MACD muss über den gesamten DataFrame berechnet werden, um korrekte Werte zu erhalten
+    macd_df_full = ind.macd(full_close)
+
+    rsi = ind.rsi(full_close, cfg.get("rsi_period", 14)).tail(days)
+    sma_short = ind.sma(full_close, cfg.get("sma_short", 20)).tail(days)
+    sma_long = ind.sma(full_close, cfg.get("sma_long", 50)).tail(days)
+    bb = ind.bollinger_bands(full_close, cfg.get("bollinger_period", 20), cfg.get("bollinger_stddev", 2.0)).tail(days)
 
     bias, reason = overall_bias(df, cfg)
-    atr_value = ind.atr(df, cfg.get("atr_period", 14)).iloc[-1]
+    atr_value = ind.atr(df, cfg.get("atr_period", 14)).iloc[-1] if len(df) > cfg.get("atr_period", 14) else float("nan")
+
+    # 52-Wochen-Hoch/-Tief über den gesamten verfügbaren DataFrame
+    fifty_two_week_high = float(df["High"].max())
+    fifty_two_week_low = float(df["Low"].min())
+
     support, resistance = ind.support_resistance(df, cfg.get("support_resistance_window", 20))
 
     last_price = float(full_close.iloc[-1])
@@ -217,23 +292,48 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
         "dates": [d.strftime("%Y-%m-%d") for d in close.index],
         "close": [round(v, 2) for v in close.tolist()],
         "rsi": [round(v, 1) for v in rsi.tolist()],
+        "sma_short": [round(v, 2) if pd.notna(v) else None for v in sma_short.tolist()],
+        "sma_long": [round(v, 2) if pd.notna(v) else None for v in sma_long.tolist()],
+        "bb_upper": [round(v, 2) if pd.notna(v) else None for v in bb["upper"].tolist()],
+        "bb_lower": [round(v, 2) if pd.notna(v) else None for v in bb["lower"].tolist()],
+        "macd_line": [round(v, 2) if pd.notna(v) else None for v in macd_df_full["macd"].tail(days).tolist()],
+        "signal_line": [round(v, 2) if pd.notna(v) else None for v in macd_df_full["signal"].tail(days).tolist()],
+        "macd_hist": [round(v, 2) if pd.notna(v) else None for v in macd_df_full["hist"].tail(days).tolist()],
         "bias": bias,
         "bias_color": BIAS_COLORS.get(bias, "#999"),
         "bias_reason": reason,
         "atr": round(float(atr_value), 2) if pd.notna(atr_value) else "n/a",
         "support": round(support, 2),
         "resistance": round(resistance, 2),
+        "fifty_two_week_high": round(fifty_two_week_high, 2),
+        "fifty_two_week_low": round(fifty_two_week_low, 2),
         "price": round(last_price, 2),
         "day_change_pct": round(day_change_pct, 2),
         "ema50": round(float(ema50), 2) if pd.notna(ema50) else None,
         "ema200": round(float(ema200), 2) if pd.notna(ema200) else None,
         "potential_pct": round(float(potential_pct), 2) if pd.notna(potential_pct) else None,
+        "last_rsi": round(float(rsi.iloc[-1]), 1),
+        "last_macd_hist": round(float(macd_df_full["hist"].iloc[-1]), 2) if pd.notna(macd_df_full["hist"].iloc[-1]) else None,
     }
 
 
 def _overview_rows(chart_data: dict) -> str:
     rows = []
     for symbol, d in chart_data.items():
+        # Proximity to 52W High/Low
+        high_proximity_pct = (d['price'] / d['fifty_two_week_high'] - 1) * 100 if d['fifty_two_week_high'] else float('nan')
+        low_proximity_pct = (d['price'] / d['fifty_two_week_low'] - 1) * 100 if d['fifty_two_week_low'] else float('nan')
+
+        high_prox_txt = f"{high_proximity_pct:+.1f}%" if pd.notna(high_proximity_pct) else "n/a"
+        low_prox_txt = f"{low_proximity_pct:+.1f}%" if pd.notna(low_proximity_pct) else "n/a"
+
+        # Format MACD Hist
+        macd_hist_txt = f"{d['last_macd_hist']:+.2f}" if d['last_macd_hist'] is not None else "n/a"
+        macd_hist_color = "#3ecf6b" if d['last_macd_hist'] is not None and d['last_macd_hist'] >= 0 else "#ff5c5c"
+        if d['last_macd_hist'] is None:
+            macd_hist_color = "#999"
+
+
         change_color = "#3ecf6b" if d["day_change_pct"] >= 0 else "#ff5c5c"
         ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
         ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
@@ -241,10 +341,14 @@ def _overview_rows(chart_data: dict) -> str:
         rows.append(
             f"<tr><td>{symbol}</td><td>{d['price']:.2f}</td>"
             f"<td style=\"color:{change_color}\">{d['day_change_pct']:+.2f}%</td>"
-            f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>"
+            f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>" # Potential
+            f"<td>{d['last_rsi']:.1f}</td>" # RSI
+            f"<td style=\"color:{macd_hist_color}\">{macd_hist_txt}</td>" # MACD Hist
+            f"<td>{high_prox_txt}</td>" # 52W High Proximity
+            f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"7\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"11\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
@@ -261,9 +365,18 @@ def _alert_row(row) -> str:
 
 def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None) -> None:
     cfg = indicator_cfg or {}
-    chart_data = {
-        symbol: _series_for_symbol(df, cfg) for symbol, df in symbol_dataframes.items() if df is not None
-    }
+
+    # Sammle alle Kategorien pro Symbol aus den Alerts
+    symbol_to_alert_categories = defaultdict(set)
+    for row in recent_alerts:
+        symbol_to_alert_categories[row['symbol']].add(_categorize(row['kind']))
+
+    chart_data = {}
+    for symbol, df in symbol_dataframes.items():
+        if df is not None:
+            data = _series_for_symbol(df, cfg)
+            data['alert_categories'] = list(symbol_to_alert_categories[symbol]) # Füge Kategorien zu den Chart-Daten hinzu
+            chart_data[symbol] = data
 
     alert_rows = "\n".join(_alert_row(row) for row in recent_alerts) or (
         "<tr><td colspan=\"4\">Noch keine Alerts.</td></tr>"

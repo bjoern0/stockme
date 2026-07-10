@@ -5,3 +5,5 @@ PyYAML>=6.0
 requests>=2.31
 python-dotenv>=1.0
 praw>=7.7
+
+Jinja2

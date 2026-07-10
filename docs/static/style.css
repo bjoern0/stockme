@@ -1,0 +1,20 @@
+
+  body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f1115; color: #e6e6e6; }
+  h1 { font-size: 1.4rem; }
+  .meta { color: #999; font-size: 0.85rem; margin-bottom: 2rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.5rem; }
+  .card { background: #1a1d24; border-radius: 8px; padding: 1rem; }
+  .card h2 { margin: 0 0 0.5rem 0; font-size: 1.1rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #333; }
+  th { color: #999; }
+  .disclaimer { margin-top: 2rem; color: #777; font-size: 0.8rem; }
+  .filter-bar { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; }
+  .filter-bar input, .filter-bar select {
+    background: #1a1d24; color: #e6e6e6; border: 1px solid #333; border-radius: 6px; padding: 0.4rem 0.6rem;
+  }
+  tr.priority { box-shadow: inset 3px 0 0 #ff9f4e; background: rgba(255, 159, 78, 0.08); }
+  tr.hidden-row { display: none; }
+  .card.hidden-card { display: none; }
+  a.symlink { color: #4ea1ff; text-decoration: none; cursor: pointer; }
+  a.symlink:hover { text-decoration: underline; }

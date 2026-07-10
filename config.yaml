@@ -24,6 +24,12 @@ crypto_watchlist:
   - symbol: ETH-USD   # Ethereum
   - symbol: XRP-USD   # XRP
 
+# Eine zusätzliche Watchlist für breiteres Screening.
+# Hier können Sie z.B. alle Werte eines Index (S&P 500) oder eine eigene, größere Liste
+# von potenziellen "Geheimtipps" eintragen, die Sie mit den definierten Indikatoren scannen möchten.
+screening_watchlist:
+  - symbol: AAPL # Beispiel: Apple
+
 indicators:
   rsi_period: 14
   rsi_oversold: 30
@@ -50,8 +56,8 @@ top_movers:
 
 # Reddit-Sentiment (Platzhalter für die nächste Ausbaustufe).
 # Sobald aktiviert: benötigt REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET als Secrets/Env-Vars.
-reddit:
-  enabled: false
+reddit: # Aktiviert den Reddit-Scan
+  enabled: true
   subreddits:
     - wallstreetbets
     - wallstreetbetsGer

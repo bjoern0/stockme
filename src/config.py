@@ -25,6 +25,10 @@ class Settings:
         return [item["symbol"] for item in self.raw.get("crypto_watchlist", [])]
 
     @property
+    def screening_watchlist(self) -> list[str]:
+        return [item["symbol"] for item in self.raw.get("screening_watchlist", [])]
+
+    @property
     def indicators(self) -> dict:
         return self.raw.get("indicators", {})
 

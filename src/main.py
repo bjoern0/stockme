@@ -60,7 +60,7 @@ def scan_reddit(settings) -> list[str]:
     cfg = settings.reddit
     if not cfg.get("enabled", False):
         return []
-    symbols = settings.watchlist + settings.crypto_watchlist
+    symbols = settings.watchlist + settings.crypto_watchlist + settings.screening_watchlist # Screening-Watchlist für Reddit-Scan berücksichtigen
     counts = reddit_scan.count_mentions(
         settings.reddit_client_id,
         settings.reddit_client_secret,
@@ -86,8 +86,9 @@ def main() -> None:
     settings = load_settings()
     logger.info("Watchlist: %s", settings.watchlist)
     logger.info("Crypto-Watchlist: %s", settings.crypto_watchlist)
+    logger.info("Screening-Watchlist: %s", settings.screening_watchlist)
 
-    dataframes = fetch_all(settings.watchlist + settings.crypto_watchlist)
+    dataframes = fetch_all(settings.watchlist + settings.crypto_watchlist + settings.screening_watchlist)
 
     messages = scan_symbols(dataframes, settings) + scan_top_movers(settings) + scan_reddit(settings)
 
