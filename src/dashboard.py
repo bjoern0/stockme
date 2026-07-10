@@ -148,7 +148,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
   card.dataset.stockCategory = data.stock_category; // Add stock category to card dataset
-  card.dataset.alertCategories = data.alert_categories ? data.alert_categories.join(',') : ''; // Renamed for clarity
+  card.dataset.alertCategories = data.alert_categories ? data.alert_categories.join(',') : '';
   card.innerHTML = `<h2>${{symbol}} - ${{data.company_name}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
@@ -235,22 +235,29 @@ function scrollToChart(symbol) {{
 
 function applyFilters() {{
   const symbolQuery = document.getElementById('symbolFilter').value.trim().toUpperCase();
-  const category = document.getElementById('categoryFilter').value;
+  const alertCategory = document.getElementById('categoryFilter').value; // Renamed for clarity
+  const stockCategory = document.getElementById('stockCategoryFilter').value; // New stock category filter
 
+  // Filter alerts table
   document.querySelectorAll('#alertsTable tbody tr').forEach(row => {{
     const rowSymbol = (row.dataset.symbol || '').toUpperCase();
-    const rowCategory = row.dataset.category || '';
+    const rowAlertCategory = row.dataset.category || '';
     const symbolMatch = !symbolQuery || rowSymbol.includes(symbolQuery);
-    const categoryMatch = !category || rowCategory === category;
-    row.classList.toggle('hidden-row', !(symbolMatch && categoryMatch));
+    const alertCategoryMatch = !alertCategory || rowAlertCategory === alertCategory;
+    row.classList.toggle('hidden-row', !(symbolMatch && alertCategoryMatch));
   }});
 
+  // Filter charts
   document.querySelectorAll('#charts .card').forEach(card => {{
     const cardSymbol = (card.dataset.symbol || '').toUpperCase();
-    const cardCategories = (card.dataset.categories || '').split(','); // Get categories for this symbol
+    const cardAlertCategories = (card.dataset.alertCategories || '').split(','); // Use renamed attribute
+    const cardStockCategory = card.dataset.stockCategory || ''; // Get stock category from dataset
+
     const symbolMatch = !symbolQuery || cardSymbol.includes(symbolQuery);
-    const categoryMatch = !category || cardCategories.includes(category); // Show if no category selected OR if symbol has alert in selected category
-    card.classList.toggle('hidden-card', !(symbolMatch && categoryMatch));
+    const alertCategoryMatch = !alertCategory || cardAlertCategories.includes(alertCategory);
+    const stockCategoryMatch = !stockCategory || cardStockCategory === stockCategory;
+
+    card.classList.toggle('hidden-card', !(symbolMatch && alertCategoryMatch && stockCategoryMatch));
   }});
 }}
 
@@ -262,13 +269,14 @@ document.getElementById('stockCategoryFilter').addEventListener('change', applyF
 document.getElementById('resetFilters').addEventListener('click', () => {{
   document.getElementById('symbolFilter').value = '';
   document.getElementById('categoryFilter').value = '';
+  document.getElementById('stockCategoryFilter').value = ''; // Reset new filter
   applyFilters();
 }});
 document.getElementById('alertsTable').addEventListener('click', (event) => {{
   const link = event.target.closest('.symlink');
   if (link) {{
-    const row = link.closest('tr');
-    if (row) scrollToChart(row.dataset.symbol);
+    const symbol = link.dataset.symbol; // Get symbol from data-symbol attribute
+    if (symbol) scrollToChart(symbol);
   }}
 }});
 
@@ -277,13 +285,19 @@ document.querySelector('table:first-of-type').addEventListener('click', (event) 
   // Check if the clicked element or its parent is a td, and then if it's the symbol column
   if (event.target.tagName === 'TD' && event.target.cellIndex === 0) {{
     const symbol = event.target.textContent;
-  const link = event.target.closest('.symlink');
-  if (link) {{
-    const row = link.closest('tr');
-    const symbol = link.dataset.symbol; // Get symbol from data-symbol attribute
     if (symbol) scrollToChart(symbol);
   }}
 }});
+
+// Initialize Tablesort.js on the overview table
+try {{
+  new Tablesort(document.getElementById('overviewTable'));
+  console.log('Tablesort initialized successfully.');
+}} catch (e) {{
+  console.error('Error initializing Tablesort:', e);
+}}
+
+
 </script>
 </body>
 </html>
@@ -303,7 +317,7 @@ def _format_fred_data_for_js(fred_data: dict) -> str:
     return " &middot; ".join(items)
 
 
-def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
+def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, stock_category: str = "Uncategorized", days: int = 90) -> dict:
     full_close = df["Close"]
     # Sicherstellen, dass wir nicht mehr Daten anfordern als vorhanden
     if len(full_close) < days:
@@ -345,7 +359,6 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90)
     pe_ratio: float | None = None
     dividend_yield: float | None = None
     market_cap: float | None = None
-    stock_category: str = "Uncategorized" # Default value
     company_name: str | None = None
     eps: float | None = None
     try:
@@ -420,9 +433,7 @@ def _overview_rows(chart_data: dict) -> str: # This function was already correct
         change_color = "#3ecf6b" if d["day_change_pct"] >= 0 else "#ff5c5c"
         ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
         ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
-        potential_txt = f"{d['potential_pct']:+.1f}%" if d["potential_pct"] is not None else "n/a"
-        potential_val = d.get('potential_pct')
-        potential_txt = f"{potential_val:+.1f}%" if pd.notna(potential_val) else "n/a" # Robustere Prüfung auf NaN
+        potential_txt = f"{d['potential_pct']:+.1f}%" if pd.notna(d.get('potential_pct')) else "n/a" # Robustere Prüfung auf NaN
         pe_ratio_val = d.get('pe_ratio')
         pe_ratio_txt = f"{pe_ratio_val:.2f}" if isinstance(pe_ratio_val, (int, float)) else "n/a"
 
@@ -458,24 +469,32 @@ def _alert_row(row) -> str:
     return (
         f"<tr class=\"{row_class}\" data-symbol=\"{row['symbol']}\" data-category=\"{category}\">"
         f"<td>{row['sent_at'][:19].replace('T', ' ')}</td>"
-        f"<td><a class=\"symlink\">{row['symbol']}</a></td>"
+        f"<td><a class=\"symlink\" data-symbol=\"{row['symbol']}\">{row['symbol']}</a></td>"
         f"<td>{category}</td>"
         f"<td>{row['message'] or row['kind']}</td></tr>"
     )
 
 
-def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None) -> None:
+def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None, stock_configs: list[dict[str, str]] | None = None) -> None:
     cfg = indicator_cfg or {}
+    stock_configs = stock_configs or []
+    # Create a mapping from symbol to its stock category for easy lookup
+    symbol_to_stock_category = {item['symbol']: item.get('category', 'Uncategorized') for item in stock_configs}
 
     # Sammle alle Kategorien pro Symbol aus den Alerts
     symbol_to_alert_categories = defaultdict(set)
     for row in recent_alerts:
         symbol_to_alert_categories[row['symbol']].add(_categorize(row['kind']))
+    
+    # Get all unique stock categories for the filter dropdown
+    all_stock_categories = sorted(list(set(symbol_to_stock_category.values())))
+    stock_category_options = "".join([f"<option value=\"{cat}\">{cat}</option>" for cat in all_stock_categories])
 
     chart_data = {}
     for symbol, df in symbol_dataframes.items():
         if df is not None:
-            data = _series_for_symbol(symbol, df, cfg) # <--- HIER WIRD DAS SYMBOL KORREKT ÜBERGEBEN
+            stock_category = symbol_to_stock_category.get(symbol, "Uncategorized")
+            data = _series_for_symbol(symbol, df, cfg, stock_category=stock_category) # Pass stock_category
             data['alert_categories'] = list(symbol_to_alert_categories[symbol]) # Füge Kategorien zu den Chart-Daten hinzu
             chart_data[symbol] = data
 
