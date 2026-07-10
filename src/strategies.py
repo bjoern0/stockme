@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pandas as pd
+import pandas as pd # pandas ist hier nicht direkt nötig, kann entfernt werden
 
-from .signals import Signal
+from .types import Signal # Importiere Signal aus dem neuen Modul
 
 
 @dataclass

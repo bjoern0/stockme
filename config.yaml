@@ -77,7 +77,7 @@ top_movers:
 # Reddit-Sentiment (Platzhalter für die nächste Ausbaustufe).
 # Sobald aktiviert: benötigt REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET als Secrets/Env-Vars.
 reddit: # Aktiviert den Reddit-Scan
-  enabled: true
+  enabled: false
   subreddits:
     - wallstreetbets
     - wallstreetbetsGer

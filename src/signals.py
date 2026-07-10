@@ -4,19 +4,10 @@ Bewusst simpel gehalten: lieber wenige robuste Regeln als viele überoptimierte 
 (Overfitting auf historische Daten ist das größte Risiko bei sowas)."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pandas as pd
 from . import strategies
-
 from . import indicators as ind
-
-
-@dataclass
-class Signal:
-    symbol: str
-    kind: str       # z.B. "RSI_OVERSOLD", "SMA_CROSS_UP", "VOLUME_SPIKE"
-    message: str
+from .types import Signal # Importiere Signal aus dem neuen Modul
 
 
 def evaluate(symbol: str, df: pd.DataFrame, cfg: dict) -> list[Signal]:
