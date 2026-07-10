@@ -101,11 +101,11 @@ TEMPLATE = """<!DOCTYPE html>
   // Function to format FRED values
   function formatFredValue(seriesId, value) {
     return parseFloat(value).toFixed(2) + '%'; // Default to percentage for common FRED series
-  }
+  }}
 </script>
 <h2>Übersicht</h2>
 <table>
-  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th>
+  <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th><th>KGV</th><th>Div. Rendite</th><th>Marktkap.</th><th>EPS</th>
     <th>RSI</th><th>MACD Hist</th><th>52W High</th><th>52W Low</th><th>Bias</th></tr></thead>
   <tbody>
     {overview_rows}
@@ -365,6 +365,7 @@ def _overview_rows(chart_data: dict) -> str:
         # Format MACD Hist
         macd_hist_txt = f"{d['last_macd_hist']:+.2f}" if d['last_macd_hist'] is not None else "n/a"
         macd_hist_color = "#3ecf6b" if d['last_macd_hist'] is not None and d['last_macd_hist'] >= 0 else "#ff5c5c"
+        # Fallback for None, though it should be handled by the check above
         if d['last_macd_hist'] is None:
             macd_hist_color = "#999"
 
@@ -373,17 +374,26 @@ def _overview_rows(chart_data: dict) -> str:
         ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
         ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
         potential_txt = f"{d['potential_pct']:+.1f}%" if d["potential_pct"] is not None else "n/a"
+        pe_ratio_txt = f"{d['pe_ratio']:.2f}" if d["pe_ratio"] != "n/a" else "n/a"
+        dividend_yield_txt = d['dividend_yield'] if d['dividend_yield'] != "n/a" else "n/a"
+        market_cap_txt = d['market_cap'] if d['market_cap'] != "n/a" else "n/a"
+        eps_txt = f"{d['eps']:.2f}" if d['eps'] != "n/a" else "n/a"
+
         rows.append(
             f"<tr><td>{symbol}</td><td>{d['price']:.2f}</td>"
             f"<td style=\"color:{change_color}\">{d['day_change_pct']:+.2f}%</td>"
             f"<td>{ema50_txt}</td><td>{ema200_txt}</td><td>{potential_txt}</td>" # Potential
+            f"<td>{pe_ratio_txt}</td>" # KGV
+            f"<td>{dividend_yield_txt}</td>" # Dividendenrendite
+            f"<td>{market_cap_txt}</td>" # Marktkapitalisierung
+            f"<td>{eps_txt}</td>" # EPS
             f"<td>{d['last_rsi']:.1f}</td>" # RSI
             f"<td style=\"color:{macd_hist_color}\">{macd_hist_txt}</td>" # MACD Hist
             f"<td>{high_prox_txt}</td>" # 52W High Proximity
             f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"11\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"15\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
