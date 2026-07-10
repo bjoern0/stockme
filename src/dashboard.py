@@ -420,7 +420,7 @@ def _overview_rows(chart_data: dict) -> str: # This function was already correct
         low_proximity_pct = (d['price'] / d['fifty_two_week_low'] - 1) * 100 if d['fifty_two_week_low'] else float('nan')
 
         high_prox_txt = f"{high_proximity_pct:+.1f}%" if pd.notna(high_proximity_pct) else "n/a"
-        low_prox_txt = f"{low_proximity_pct:+.1f}%" if pd.notna(low_proximity_pct) else "n/a"
+        low_prox_txt = f"{low_prox_pct:+.1f}%" if pd.notna(low_prox_pct) else "n/a"
 
         # Format MACD Hist
         macd_hist_txt = f"{d['last_macd_hist']:+.2f}" if d['last_macd_hist'] is not None else "n/a"
