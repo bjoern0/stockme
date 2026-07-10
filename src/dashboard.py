@@ -374,10 +374,18 @@ def _overview_rows(chart_data: dict) -> str:
         ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
         ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
         potential_txt = f"{d['potential_pct']:+.1f}%" if d["potential_pct"] is not None else "n/a"
-        pe_ratio_txt = f"{d['pe_ratio']:.2f}" if d["pe_ratio"] != "n/a" else "n/a"
-        dividend_yield_txt = d['dividend_yield'] if d['dividend_yield'] != "n/a" else "n/a"
-        market_cap_txt = d['market_cap'] if d['market_cap'] != "n/a" else "n/a"
-        eps_txt = f"{d['eps']:.2f}" if d['eps'] != "n/a" else "n/a"
+
+        pe_ratio_val = d.get('pe_ratio')
+        pe_ratio_txt = f"{pe_ratio_val:.2f}" if isinstance(pe_ratio_val, (int, float)) else "n/a"
+
+        dividend_yield_val = d.get('dividend_yield')
+        dividend_yield_txt = dividend_yield_val if isinstance(dividend_yield_val, str) else "n/a"
+
+        market_cap_val = d.get('market_cap')
+        market_cap_txt = market_cap_val if isinstance(market_cap_val, str) else "n/a"
+
+        eps_val = d.get('eps')
+        eps_txt = f"{eps_val:.2f}" if isinstance(eps_val, (int, float)) else "n/a"
 
         rows.append(
             f"<tr><td>{symbol}</td><td>{d['price']:.2f}</td>"
@@ -393,7 +401,7 @@ def _overview_rows(chart_data: dict) -> str:
             f"<td>{low_prox_txt}</td>" # 52W Low Proximity
             f"<td style=\"color:{d['bias_color']}\">{d['bias']}</td></tr>"
         )
-    return "\n".join(rows) or "<tr><td colspan=\"15\">Keine Daten.</td></tr>"
+    return "\n".join(rows) or "<tr><td colspan=\"16\">Keine Daten.</td></tr>"
 
 
 def _alert_row(row) -> str:
