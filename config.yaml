@@ -12,6 +12,8 @@ watchlist:
     category: Semiconductors
   - symbol: HOOD   # Robinhood Markets
     category: Fintech
+  - symbol: VOW.DE # Volkswagen AG (Xetra) - Hauptaktie, in EUR
+    category: Automotive
   - symbol: MSFT   # Microsoft
     category: Tech
   - symbol: VWAGY  # Volkswagen AG (ADR)

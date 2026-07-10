@@ -227,7 +227,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
 function scrollToChart(symbol) {{
   const card = document.getElementById('card-' + symbol);
   if (card) {{
-    card.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+    card.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); // Korrektur: scrollOfView -> scrollIntoView
     card.style.outline = '2px solid #4ea1ff';
     setTimeout(() => card.style.outline = '', 1500);
   }}
@@ -390,8 +390,12 @@ def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, stock_category:
         "last_rsi": round(float(rsi.iloc[-1]), 1),
         "last_macd_hist": round(float(macd_df_full["hist"].iloc[-1]), 2) if pd.notna(macd_df_full["hist"].iloc[-1]) else None,
         # --- Fundamentaldaten formatieren und hinzufügen ---
-        "pe_ratio": round(pe_ratio, 2) if isinstance(pe_ratio, (int, float)) and pd.notna(pe_ratio) else "n/a",
-        "dividend_yield": f"{round(dividend_yield * 100, 2)}%" if isinstance(dividend_yield, (int, float)) and pd.notna(dividend_yield) else "n/a",
+        "pe_ratio": round(pe_ratio, 2) if isinstance(pe_ratio, (int, float)) and pd.notna(pe_ratio) else "n/a", 
+        "dividend_yield": (
+            f"{dividend_yield:.2f}%" if isinstance(dividend_yield, (int, float)) and pd.notna(dividend_yield) and dividend_yield > 1.0 # If already scaled (e.g., 1.85 for 1.85%)
+            else f"{dividend_yield * 100:.2f}%" if isinstance(dividend_yield, (int, float)) and pd.notna(dividend_yield) # If decimal (e.g., 0.0185 for 1.85%)
+            else "n/a"
+        ),
         "market_cap": f"{market_cap / 1_000_000_000:.2f}B" if isinstance(market_cap, (int, float)) and pd.notna(market_cap) else "n/a", # Format in Billions
         "stock_category": stock_category,
         "company_name": company_name if company_name else "n/a",
