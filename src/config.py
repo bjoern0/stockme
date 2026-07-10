@@ -56,6 +56,10 @@ class Settings:
     def reddit_client_secret(self) -> str | None:
         return os.environ.get("REDDIT_CLIENT_SECRET")
 
+    @property
+    def fred_api_key(self) -> str | None:
+        return os.environ.get("FRED_API_KEY")
+
 
 def load_settings(config_path: Path | None = None) -> Settings:
     path = config_path or (ROOT_DIR / "config.yaml")

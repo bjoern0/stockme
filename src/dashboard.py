@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
 
+import yfinance as yf
 import pandas as pd
 
 from . import indicators as ind
@@ -79,7 +80,7 @@ TEMPLATE = """<!DOCTYPE html>
   <input type="text" id="symbolFilter" placeholder="Symbol filtern (z.B. NVDA)...">
   <select id="categoryFilter">
     <option value="">Alle Kategorien</option>
-    <option value="Breakout">Breakout</option> <!-- Keep this for explicit selection -->
+    <option value="Breakout">Breakout</option>
     <option value="Strategie">Strategie</option>
     <option value="Top-Mover">Top-Mover</option>
     <option value="Reddit">Reddit</option>
@@ -93,6 +94,15 @@ TEMPLATE = """<!DOCTYPE html>
   <button id="resetFilters">Filter zurücksetzen</button>
 </div>
 
+<div id="fred-data" style="margin-top: 1.5rem; font-size: 0.9rem; color: #999;">
+  <!-- FRED data will be inserted here by JS -->
+</div>
+<script>
+  // Function to format FRED values
+  function formatFredValue(seriesId, value) {
+    return parseFloat(value).toFixed(2) + '%'; // Default to percentage for common FRED series
+  }
+</script>
 <h2>Übersicht</h2>
 <table>
   <thead><tr><th>Symbol</th><th>Preis</th><th>Tag %</th><th>EMA50</th><th>EMA200</th><th>Potential*</th>
@@ -124,7 +134,7 @@ for (const [symbol, data] of Object.entries(chartData)) {{
   card.className = 'card'; // Add data-categories for filtering
   card.id = 'card-' + symbol;
   card.dataset.symbol = symbol;
-  card.dataset.categories = data.alert_categories.join(',');
+  card.dataset.categories = data.alert_categories ? data.alert_categories.join(',') : '';
   card.innerHTML = `<h2>${{symbol}} <span style="font-size:0.8rem; color:${{data.bias_color}}">&#9679; ${{data.bias}}</span></h2>` +
     `<div style="font-size:0.8rem; color:#999; margin-bottom:0.5rem">${{data.bias_reason}}<br>ATR(14): ${{data.atr}} &middot; Support: ${{data.support}} &middot; Resistance: ${{data.resistance}}<br>52W High: ${{data.fifty_two_week_high}} &middot; 52W Low: ${{data.fifty_two_week_low}}</div>` +
     `<canvas></canvas>`;
@@ -246,10 +256,35 @@ document.getElementById('alertsTable').addEventListener('click', (event) => {{
     if (row) scrollToChart(row.dataset.symbol);
   }}
 }});
+
+// Scroll to chart from overview table
+document.querySelector('table:first-of-type').addEventListener('click', (event) => {{
+  // Check if the clicked element or its parent is a td, and then if it's the symbol column
+  if (event.target.tagName === 'TD' && event.target.cellIndex === 0) {{
+    const symbol = event.target.textContent;
+  const link = event.target.closest('.symlink');
+  if (link) {{
+    const row = link.closest('tr');
+    if (row) scrollToChart(row.dataset.symbol);
+  }}
+}});
 </script>
 </body>
 </html>
-"""
+""" # End of TEMPLATE
+
+
+def _format_fred_data_for_js(fred_data: dict) -> str:
+    """Formats FRED data into a string for JavaScript display."""
+    if not fred_data:
+        return ""
+    
+    items = []
+    for series_id, data in fred_data.items():
+        # Use JS function to format values
+        items.append(f"<span>{data['display_name']}: <span id='fred-{series_id}'></span> ({data['date']})</span>")
+    
+    return " &middot; ".join(items)
 
 
 def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
@@ -363,7 +398,7 @@ def _alert_row(row) -> str:
     )
 
 
-def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None) -> None:
+def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indicator_cfg: dict | None = None, fred_economic_data: dict | None = None) -> None:
     cfg = indicator_cfg or {}
 
     # Sammle alle Kategorien pro Symbol aus den Alerts
@@ -382,8 +417,11 @@ def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indi
         "<tr><td colspan=\"4\">Noch keine Alerts.</td></tr>"
     )
 
+    fred_data_html = _format_fred_data_for_js(fred_economic_data or {})
+
     html = TEMPLATE.format(
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+        fred_data_html=fred_data_html,
         alert_rows=alert_rows,
         overview_rows=_overview_rows(chart_data),
         chart_data_json=json.dumps(chart_data),
@@ -391,3 +429,12 @@ def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indi
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(html, encoding="utf-8")
+
+    # Inject FRED data values into the HTML after rendering
+    if fred_economic_data:
+        fred_script = "<script>\n"
+        for series_id, data in fred_economic_data.items():
+            fred_script += f"  document.getElementById('fred-{series_id}').textContent = formatFredValue('{series_id}', {data['value']});\n"
+        fred_script += "</script>"
+        with open(OUTPUT_PATH, "a", encoding="utf-8") as f:
+            f.write(fred_script)

@@ -2,24 +2,36 @@
 # Watchlist erweitern = einfach Ticker (Yahoo-Finance-Symbol) hinzufügen.
 
 watchlist:
-  - symbol: MU     # Micron
-  - symbol: NVDA   # Nvidia
-  - symbol: NFLX   # Netflix
+  - symbol: AAPL   # Apple
   - symbol: MSFT   # Microsoft
-  - symbol: BKNG   # Booking Holdings
-  # Test-Kandidaten, per Websuche identifiziert als überverkauft (Stand ca. 2.-8. Juli 2026,
-  # externe Quellen: stockmarketwatch.com RSI-Screener, Insider Monkey Analysten-Daten).
-  # Keine Kaufempfehlung, nur Beobachtungskandidaten - der Scanner berechnet RSI etc. selbst neu.
-  - symbol: SLB    # Schlumberger - RSI ~8.7 (7/2/26), extrem überverkauft
-  - symbol: WU     # Western Union - RSI ~23, überverkauft
-  - symbol: RIO    # Rio Tinto - RSI ~29.8 (7/8/26), gerade überverkauft
-  - symbol: TSN    # Tyson Foods - RSI ~27, überverkauft
-  - symbol: ICE    # Intercontinental Exchange - überverkauft + "Strong Buy" bei Analysten
+  - symbol: GOOGL  # Alphabet (Google)
+  - symbol: AMZN   # Amazon
+  - symbol: NVDA   # Nvidia
+  - symbol: TSLA   # Tesla
+  - symbol: JPM    # JPMorgan Chase
+  - symbol: V      # Visa
+  - symbol: PG     # Procter & Gamble
+  - symbol: KO     # Coca-Cola
+  - symbol: UNH    # UnitedHealth Group
+  - symbol: LLY    # Eli Lilly and Company
+  - symbol: JNJ    # Johnson & Johnson
+  - symbol: XOM    # Exxon Mobil
+  - symbol: CVX    # Chevron
+  - symbol: WMT    # Walmart
+  - symbol: HD     # Home Depot
+  - symbol: MCD    # McDonald's
+  - symbol: NFLX   # Netflix
+  - symbol: AMD    # Advanced Micro Devices
+  - symbol: BABA   # Alibaba Group Holding
+  - symbol: PFE    # Pfizer
+  - symbol: DIS    # Walt Disney
+  - symbol: SBUX   # Starbucks
 
 # Krypto läuft 24/7 (kein Handelsschluss) und ist i.d.R. deutlich volatiler als Aktien.
 # Nutzt vorerst dieselben Indikator-Schwellwerte wie Aktien (siehe "indicators" unten) -
 # ggf. später eigene, weniger empfindliche Schwellwerte für Krypto ergänzen.
 crypto_watchlist:
+  - symbol: SOL-USD   # Solana
   - symbol: BTC-USD   # Bitcoin
   - symbol: ETH-USD   # Ethereum
   - symbol: XRP-USD   # XRP
@@ -27,8 +39,16 @@ crypto_watchlist:
 # Eine zusätzliche Watchlist für breiteres Screening.
 # Hier können Sie z.B. alle Werte eines Index (S&P 500) oder eine eigene, größere Liste
 # von potenziellen "Geheimtipps" eintragen, die Sie mit den definierten Indikatoren scannen möchten.
+# Diese Liste wird für den Reddit-Scan und die technische Analyse verwendet.
 screening_watchlist:
-  - symbol: AAPL # Beispiel: Apple
+  - symbol: GME    # GameStop (oft Reddit-relevant)
+  - symbol: AMC    # AMC Entertainment (oft Reddit-relevant)
+  - symbol: PLTR   # Palantir Technologies
+  - symbol: RIVN   # Rivian Automotive
+  - symbol: COIN   # Coinbase Global
+  - symbol: MSTR   # MicroStrategy (Bitcoin-Bezug)
+  - symbol: U      # Unity Software
+  - symbol: SNOW   # Snowflake
 
 indicators:
   rsi_period: 14
@@ -64,3 +84,15 @@ reddit: # Aktiviert den Reddit-Scan
     - Trumptrades
   min_mentions: 5   # Ticker-Erwähnungen im Zeitfenster, ab der ein Alert sinnvoll ist
   lookback_hours: 24
+
+# FRED Economic Data (Federal Reserve Economic Data)
+# Benötigt FRED_API_KEY als Secret/Env-Var.
+fred:
+  enabled: false # Auf 'true' setzen, um FRED-Daten abzurufen
+  series:
+    - id: FEDFUNDS # Federal Funds Rate
+      name: Fed Funds Rate
+    - id: CPIAUCSL # Consumer Price Index for All Urban Consumers
+      name: CPI
+    - id: UNRATE # Unemployment Rate
+      name: Unemployment Rate

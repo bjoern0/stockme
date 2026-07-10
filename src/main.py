@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from . import dashboard, data, notifier, reddit_scan, state
+from . import dashboard, data, notifier, reddit_scan, state, fred_data
 from .config import load_settings
 from .signals import evaluate
 
@@ -82,6 +82,20 @@ def scan_reddit(settings) -> list[str]:
     return messages
 
 
+def fetch_and_display_fred_data(settings) -> dict:
+    cfg = settings.fred
+    if not cfg.get("enabled", False):
+        logger.info("FRED data fetching is disabled.")
+        return {}
+
+    fred_api_key = settings.fred_api_key
+    if not fred_api_key:
+        logger.warning("FRED_API_KEY not set, FRED data will not be fetched.")
+        return {}
+
+    return fred_data.fetch_all_fred_data(fred_api_key, cfg.get("series", []))
+
+
 def main() -> None:
     settings = load_settings()
     logger.info("Watchlist: %s", settings.watchlist)
@@ -90,9 +104,11 @@ def main() -> None:
 
     dataframes = fetch_all(settings.watchlist + settings.crypto_watchlist + settings.screening_watchlist)
 
-    messages = scan_symbols(dataframes, settings) + scan_top_movers(settings) + scan_reddit(settings)
+    messages = scan_symbols(dataframes, settings) + scan_top_movers(settings) + scan_reddit(settings) # + scan_news(settings)
 
-    dashboard.render(dataframes, state.get_recent_alerts(), settings.indicators)
+    fred_economic_data = fetch_and_display_fred_data(settings)
+
+    dashboard.render(dataframes, state.get_recent_alerts(), settings.indicators, fred_economic_data)
     logger.info("Dashboard aktualisiert: %s", dashboard.OUTPUT_PATH)
 
     if not messages:
