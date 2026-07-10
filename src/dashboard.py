@@ -290,7 +290,7 @@ def _format_fred_data_for_js(fred_data: dict) -> str:
     return " &middot; ".join(items)
 
 
-def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
+def _series_for_symbol(symbol: str, df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     full_close = df["Close"]
     # Sicherstellen, dass wir nicht mehr Daten anfordern als vorhanden
     if len(full_close) < days:
@@ -324,7 +324,9 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     # "Potential" = Abstand zum EMA200 in % (Mean-Reversion-Maß, KEINE Kursprognose/-ziel):
     # positiv = Kurs unter EMA200 (Aufholpotential zum langfristigen Schnitt),
     # negativ = Kurs über EMA200 (bereits darüber gelaufen)
-    potential_pct = (ema200 / last_price - 1) * 100 if pd.notna(ema200) and last_price else float("nan")
+    potential_pct = float("nan")
+    if pd.notna(ema200) and last_price and last_price != 0: # Zusätzliche Prüfung auf last_price != 0
+        potential_pct = (ema200 / last_price - 1) * 100
 
     # --- Fundamentaldaten abrufen ---
     pe_ratio: float | None = None
@@ -333,7 +335,7 @@ def _series_for_symbol(df: pd.DataFrame, cfg: dict, days: int = 90) -> dict:
     company_name: str | None = None
     eps: float | None = None
     try:
-        ticker_info = yf.Ticker(symbol).info # df.name should be the symbol
+        ticker_info = yf.Ticker(symbol).info
         pe_ratio = ticker_info.get("trailingPE")
         dividend_yield = ticker_info.get("dividendYield")
         market_cap = ticker_info.get("marketCap")
@@ -400,7 +402,8 @@ def _overview_rows(chart_data: dict) -> str: # This function was already correct
         ema50_txt = f"{d['ema50']:.2f}" if d["ema50"] is not None else "n/a"
         ema200_txt = f"{d['ema200']:.2f}" if d["ema200"] is not None else "n/a (zu wenig Historie)"
         potential_txt = f"{d['potential_pct']:+.1f}%" if d["potential_pct"] is not None else "n/a"
-
+        potential_val = d.get('potential_pct')
+        potential_txt = f"{potential_val:+.1f}%" if pd.notna(potential_val) else "n/a" # Robustere Prüfung auf NaN
         pe_ratio_val = d.get('pe_ratio')
         pe_ratio_txt = f"{pe_ratio_val:.2f}" if isinstance(pe_ratio_val, (int, float)) else "n/a"
 
@@ -453,7 +456,7 @@ def render(symbol_dataframes: dict[str, pd.DataFrame], recent_alerts: list, indi
     chart_data = {}
     for symbol, df in symbol_dataframes.items():
         if df is not None:
-            data = _series_for_symbol(df, cfg)
+            data = _series_for_symbol(symbol, df, cfg) # <--- HIER WIRD DAS SYMBOL KORREKT ÜBERGEBEN
             data['alert_categories'] = list(symbol_to_alert_categories[symbol]) # Füge Kategorien zu den Chart-Daten hinzu
             chart_data[symbol] = data
 
