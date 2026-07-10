@@ -8,6 +8,13 @@ on:
     - cron: "*/30 13-22 * * 1-5"
   workflow_dispatch: {}  # manuelles Auslösen über den "Run workflow"-Button
 
+# Verhindert, dass sich überlappende Läufe (z.B. Scheduled + manuell getriggert) beim
+# Zurückcommitten gegenseitig blockieren ("fetch first"-Fehler) - Läufe werden stattdessen
+# nacheinander abgearbeitet statt parallel zu laufen.
+concurrency:
+  group: stockme-scan
+  cancel-in-progress: false
+
 permissions:
   contents: write  # damit der State (data/state.db) zurückcommitet werden kann
 
@@ -38,4 +45,7 @@ jobs:
           git config user.email "stockme-bot@users.noreply.github.com"
           git add data/state.db docs/index.html
           git diff --staged --quiet || git commit -m "Update alert state & dashboard"
+          # Defense in depth zusätzlich zur concurrency-Sperre oben: falls der Remote
+          # trotzdem inzwischen weiter ist (z.B. manueller Push dazwischen), erst rebasen.
+          git pull --rebase --autostash
           git push
