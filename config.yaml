@@ -7,6 +7,14 @@ watchlist:
   - symbol: NFLX   # Netflix
   - symbol: MSFT   # Microsoft
   - symbol: BKNG   # Booking Holdings
+  # Test-Kandidaten, per Websuche identifiziert als überverkauft (Stand ca. 2.-8. Juli 2026,
+  # externe Quellen: stockmarketwatch.com RSI-Screener, Insider Monkey Analysten-Daten).
+  # Keine Kaufempfehlung, nur Beobachtungskandidaten - der Scanner berechnet RSI etc. selbst neu.
+  - symbol: SLB    # Schlumberger - RSI ~8.7 (7/2/26), extrem überverkauft
+  - symbol: WU     # Western Union - RSI ~23, überverkauft
+  - symbol: RIO    # Rio Tinto - RSI ~29.8 (7/8/26), gerade überverkauft
+  - symbol: TSN    # Tyson Foods - RSI ~27, überverkauft
+  - symbol: ICE    # Intercontinental Exchange - überverkauft + "Strong Buy" bei Analysten
 
 # Krypto läuft 24/7 (kein Handelsschluss) und ist i.d.R. deutlich volatiler als Aktien.
 # Nutzt vorerst dieselben Indikator-Schwellwerte wie Aktien (siehe "indicators" unten) -
