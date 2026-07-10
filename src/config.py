@@ -57,6 +57,10 @@ class Settings:
         return os.environ.get("REDDIT_CLIENT_SECRET")
 
     @property
+    def fred(self) -> dict:
+        return self.raw.get("fred", {})
+
+    @property
     def fred_api_key(self) -> str | None:
         return os.environ.get("FRED_API_KEY")
 
